@@ -1,15 +1,9 @@
+#include <clulang/lexer.hh>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <lexer.hh>
 #include <sys/stat.h>
 #include <unistd.h>
-
-static inline void usage()
-{
-    std::cout << "usage: <program> <filepath>" << std::endl;
-    std::exit(1);
-}
 
 std::string load_source_code(const char *filepath)
 {
@@ -24,25 +18,22 @@ std::string load_source_code(const char *filepath)
     char *buffer = new char[st.st_size + 2];
     std::memset(buffer, 0, st.st_size + 2);
     read(fd, buffer, st.st_size);
+
     close(fd);
 
     return buffer;
 }
 
-int main(int argc, const char **argv)
+int main(void)
 {
-    if (argc < 2)
-        usage();
-
-    Lexer lexer = Lexer();
-    lexer.feed(load_source_code(argv[1]));
+    Lexer lexer;
+    lexer.feed(load_source_code("code.scm"));
 
     Token token;
     do {
-        token = lexer.run();
+        token = lexer.next();
         std::cout << token.to_string() << std::endl;
-    } while (token.kind != Token::Kind::Eof &&
-             token.kind != Token::Kind::Unknown);
+    } while (token.kind != Token::Kind::Eof);
 
     return 0;
 }

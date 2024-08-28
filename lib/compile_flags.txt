@@ -3,5 +3,4 @@
 -pedantic
 -std=c++20
 -ggdb
--Ilib
--Isrc
+-I.

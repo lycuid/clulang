@@ -1,16 +1,23 @@
-CXXFLAGS:=-Wall -Wextra -pedantic -std=c++20 -ggdb -I.
-LDFLAGS:=
-OBJS:=main.o lexer.o
+include config.mk
 
-all: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o main $^ $(LDFLAGS)
+BIN:=$(BUILD)/bin/$(NAME)
+IDIR:=src
+OBJS:=
+CXXFLAGS+=$(FLAGS) -Ilib -I$(IDIR)
+LDFLAGS+=$(LDFLAGS) -Llib/$(BUILD) -l$(NAME)
 
-main.o: main.cc
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+all: $(IDIR)/main.cc lib ; @mkdir -p $(shell dirname $(BIN))
+	$(CXX) $(CXXFLAGS) -o $(BIN) $< $(LDFLAGS)
 
-%.o: %.cc %.hh
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+.PHONY: lib
+lib:
+	$(MAKE) -j -C $@
+
+run: $(BIN) ; ./$(BIN)
 
 .PHONY: clean compile_flags
-clean: ; rm -rf *.o main
+clean: ; rm -rf $(BUILD)
+	$(MAKE) -C lib $@
+
 compile_flags: ; echo $(CXXFLAGS) | xargs -n1 > compile_flags.txt
+	$(MAKE) -C lib $@
