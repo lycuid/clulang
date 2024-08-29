@@ -5,6 +5,7 @@
 #include <clulang/lexer/token.hh>
 #include <clulang/reader.hh>
 #include <clulang/trie.hh>
+#include <unordered_set>
 
 class AbstractLexer
 {
@@ -12,6 +13,7 @@ class AbstractLexer
     enum class State {
         Ground,
         Character,
+        String,
         Number,
         Symbol,
     };
@@ -21,8 +23,6 @@ class Lexer : public Reader,
               private AbstractLexer,
               private FSM<AbstractLexer::State>
 {
-    Trie chars, keywords;
-
   private:
     std::string_view getsym();
 
@@ -31,6 +31,7 @@ class Lexer : public Reader,
     ~Lexer() = default;
 
     Token next();
+    void forward(State);
 };
 
 #endif

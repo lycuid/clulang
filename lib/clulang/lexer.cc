@@ -1,16 +1,6 @@
 #include "lexer.hh"
 
-Lexer::Lexer() : Reader(""), FSM(State::Ground)
-{
-    chars.add("newline");
-    chars.add("space");
-    chars.add("tab");
-
-    keywords.add("let");
-    keywords.add("letrec");
-    keywords.add("let*");
-    keywords.add("define");
-}
+Lexer::Lexer() : Reader(""), FSM(State::Ground) {}
 
 bool is_valid_symbol_char(char ch)
 {
@@ -31,18 +21,24 @@ std::string_view Lexer::getsym()
     return {peek(-size), size};
 }
 
+void Lexer::forward(State new_state)
+{
+    rollback();
+    transition(new_state);
+}
+
 Token Lexer::next()
 {
     transition(State::Ground);
 
-    for (char ch; peek();) {
+    while (peek()) {
 
-        if (ch = getch(); std::isspace(ch))
-            continue;
-
-        switch (state()) {
+        switch (char ch = getch(); state()) {
 
         case State::Ground: {
+            if (std::isspace(ch))
+                break;
+
             switch (ch) {
             case '(':
                 return {Token::Kind::LeftParen, {peek(-1), 1}, {.ch = ch}};
@@ -54,6 +50,10 @@ Token Lexer::next()
                 transition(State::Character);
             } break;
 
+            case '"': {
+                transition(State::String);
+            } break;
+
             case '1': [[fallthrough]];
             case '2': [[fallthrough]];
             case '3': [[fallthrough]];
@@ -63,12 +63,10 @@ Token Lexer::next()
             case '7': [[fallthrough]];
             case '8': [[fallthrough]];
             case '9': {
-                rollback();
-                transition(State::Number);
+                forward(State::Number);
             } break;
             default: {
-                rollback();
-                transition(State::Symbol);
+                forward(State::Symbol);
             } break;
             }
         } break;
@@ -81,7 +79,7 @@ Token Lexer::next()
 
                 // we know that there is atleast 1 char at this point.
                 std::string_view sym = getsym();
-                if (sym.size() == 1 || chars.contains(sym))
+                if (sym.size() == 1 || Token::is_char(sym))
                     return {Token::Kind::Character,
                             {peek(-(sym.size() + 2)), sym.size() + 2},
                             {.ch = *sym.begin()}};
@@ -89,7 +87,30 @@ Token Lexer::next()
                 return {Token::Kind::Unknown,
                         {peek(-(sym.size() + 2)), sym.size() + 2}};
             } break;
+
+            default: {
+                rollback();
+                forward(State::Symbol);
+            } break;
             }
+        } break;
+
+        case State::String: {
+            Position start = cursor() - 2;
+            while (peek() && *peek() != '"') {
+                if (*peek() == '\\')
+                    advance();
+                advance();
+            }
+            // the loop only terminates if end of line of dquote found.
+            // if end of line, then return Unknown.
+            if (!peek())
+                return {Token::Kind::Unknown,
+                        {peek(-cursor() + start), cursor() - start - 1}};
+            // advance the double quote.
+            advance();
+            Position size = cursor() - start;
+            return {Token::Kind::String, {peek(-size), size}};
         } break;
 
         case State::Number: {
@@ -108,11 +129,12 @@ Token Lexer::next()
         } break;
 
         case State::Symbol: {
-            // rolling back as a character of the symbol is already consumed.
+            // rolling back the currently consumed character so that it would be
+            // included in the symbol from 'getsym()'
             rollback();
 
             std::string_view sym = getsym();
-            if (keywords.contains(sym))
+            if (Token::is_keyword(sym))
                 return {Token::Kind::Keyword, {peek(-sym.size()), sym.size()}};
 
             return {Token::Kind::Symbol, {peek(-sym.size()), sym.size()}};

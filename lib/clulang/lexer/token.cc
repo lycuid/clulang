@@ -1,4 +1,43 @@
 #include "token.hh"
+#include <array>
+#include <cstring>
+
+Token::Token(Kind _kind, std::string_view _span, Literal lit)
+    : kind(_kind), span(_span), literal(lit)
+{
+}
+
+consteval const std::array<const char *, 3> Token::chars()
+{
+    return {"newline", "space", "tab"};
+}
+
+consteval const std::array<const char *, 4> Token::keywords()
+{
+    return {"define", "let", "let*", "letrec"};
+}
+
+bool Token::is_char(std::string_view str)
+{
+    for (const char *ch : chars()) {
+        if (std::strlen(ch) == str.size() &&
+            std::memcmp(ch, str.begin(), str.size()) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Token::is_keyword(std::string_view str)
+{
+    for (const char *kw : keywords()) {
+        if (std::strlen(kw) == str.size() &&
+            std::memcmp(kw, str.begin(), str.size()) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
 std::string Token::to_string() const
 {
@@ -27,6 +66,11 @@ std::string Token::to_string() const
     }
     case Kind::Character: {
         sprintf(buffer, "Token::Character(%c): '%s'", literal.ch,
+                std::string(span).c_str());
+        return std::string(buffer);
+    }
+    case Kind::String: {
+        sprintf(buffer, "Token::String(%s): '%s'", std::string(span).c_str(),
                 std::string(span).c_str());
         return std::string(buffer);
     }

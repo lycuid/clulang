@@ -1,9 +1,12 @@
 #ifndef __TOKEN_HH__
 #define __TOKEN_HH__
 
+#include <array>
 #include <string>
 
-struct Token {
+class Token
+{
+  public:
     enum class Kind {
         Unknown,
         LeftParen,
@@ -11,6 +14,7 @@ struct Token {
         Symbol,
         Keyword,
         Character,
+        String,
         Number,
         Eof,
     } kind;
@@ -22,13 +26,16 @@ struct Token {
         double num;
     } literal;
 
-    Token(Kind _kind = Token::Kind::Unknown, std::string_view _span = {},
-          Literal _lit = {})
-        : kind(_kind), span(_span), literal(_lit)
-    {
-    }
+  public:
+    Token(Kind = Token::Kind::Unknown, std::string_view = {}, Literal = {});
 
     std::string to_string() const;
+
+    static bool is_char(std::string_view);
+    static bool is_keyword(std::string_view);
+
+    static consteval const std::array<const char *, 3> chars();
+    static consteval const std::array<const char *, 4> keywords();
 };
 
 #endif
